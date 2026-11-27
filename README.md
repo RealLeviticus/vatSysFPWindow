@@ -1,67 +1,96 @@
-# Eurocat FP Window (vatSys plugin)
+# Eurocat Flight Plan Window (vatSys plugin)
 
-Replaces the stock vatSys Flight Plan Window with one laid out like the Eurocat (TAAATS) FPL window.
+Shows its own Flight Plan Window in place of the vatSys Flight Plan Window. It has the layout of the Eurocat (TAAATS)
+window, and it does the same vatSys actions as the vatSys window.
 
-![Preview](docs/preview.png)
+The plugin is a WPF window built on [vatSysToolbox](https://github.com/YuKitsune/vatSysToolbox).
 
 ## Build
 
 ```powershell
-dotnet build -c Release
+git submodule update --init
+.\build.ps1
 ```
 
-Needs the .NET SDK and a vatSys install. If vatSys is not in `C:\Program Files (x86)\vatSys`, pass
-`-p:VatSysDir="<path>\bin"`.
+This needs the .NET SDK and a vatSys installation. The script builds the plugin, merges its dependencies into one
+assembly with ILRepack, and writes:
+
+- `artifacts\FlightPlanWindowPlugin\` - `FlightPlanWindowPlugin.dll` and `0Harmony.dll`
+- `artifacts\FlightPlanWindowPlugin.<version>.zip` - the same two files
+
+If vatSys is not at the path in the registry, pass `-VatSysPath "<path>"` (the directory that has `bin`). Pass
+`-Version 1.2.3` to set the version.
+
+To build without the merge (for example, in an IDE), build `source\FlightPlanWindowPlugin\FlightPlanWindowPlugin.csproj`.
 
 ## Install
 
-Copy `bin\Release\EurocatFPWindow.dll` and `bin\Release\0Harmony.dll` into a folder under the profile's
-`Plugins` directory, e.g. `Documents\vatSys Files\Profiles\Australia\Plugins\EurocatFPWindow\`, then restart
-vatSys. Remove the folder to go back to the stock window.
+Copy `FlightPlanWindowPlugin.dll` and `0Harmony.dll` to a directory in the `Plugins` directory of the profile (for
+example, `Documents\vatSys Files\Profiles\Australia\Plugins\FlightPlanWindowPlugin\`), then start vatSys again.
+Remove the directory to remove the plugin.
 
-## How it works
-
-vatSys has no hook for replacing the window, so the plugin patches `MMI.OpenFPWindow` with Harmony
-(`Patches.cs`). A second patch on the stock window's Load handler catches any stock window that still
-opens and swaps it. If anything fails, the stock window opens and the error is listed in vatSys.
-
-Non-public vatSys members are reached by reflection in `Internals.cs`; a vatSys update that renames them
-breaks that one feature rather than the whole window.
-
-## Button mapping
+## Use
 
 | Button | Action |
 | --- | --- |
-| CRE | Create a plan for the callsign in ACID (Enter to commit) |
-| MOD | Modify the loaded plan (Enter to commit) |
-| EST | Activate - opens the vatSys estimate window |
-| BACK | Deactivate a coordinated plan |
-| DEP | Enter/clear ATD (blank ATD = now, or cancels an existing departure) |
-| CNL | Cancel the FDR (with confirmation) |
-| ACC / HND | Accept jurisdiction / open the handoff menu |
-| INHI | Inhibit / un-inhibit |
-| PRL / CFL | Open the vatSys PRL / CFL menus |
-| NCOU | Decouple from the radar track and stop auto-coupling |
-| BCOU | Couple to the selected radar track, or resume auto-coupling |
-| RTE | Toggle the graphic route on the ASD |
-| Clear / Escape | Blank the window / abandon the current edit |
+| CRE | Create a flight plan for the callsign in ACID. Press Enter to apply. |
+| MOD | Modify the flight plan. Press Enter to apply. |
+| EST | Activate the flight plan. This opens the vatSys estimate window. |
+| BACK | Deactivate a coordinated flight plan. |
+| DEP | Set or clear the ATD. An empty ATD sets the time now, or cancels the departure. |
+| CNL | Cancel the flight plan. |
+| ACC / HND | Accept jurisdiction / open the handoff menu. |
+| INHI | Inhibit, or stop the inhibit. |
+| PRL / CFL | Open the vatSys PRL and CFL menus. |
+| NCOU | Decouple the radar track, and stop the automatic couple. |
+| BCOU | Couple to the selected radar track, or start the automatic couple again. |
+| RTE | Show or hide the graphic route on the ASD. |
+| Clear / Escape | Clear the window / stop the current change. |
 
-ASSR and OPDATA are edited directly in the window and applied with Enter (also while creating a plan). REGN
-reads and writes the `REG/` item in OTHER. PSSR shows the squawk the coupled aircraft is transmitting.
+- Type in ASSR and OPDATA, and press Enter to apply them.
+- REGN shows and changes the `REG/` item in OTHER.
+- PSSR shows the SSR code that the coupled aircraft transmits.
+- The title bar has the same buttons as the other vatSys windows: close, minimise, and send to back.
 
-## Appearance
+vatSys has no function for the other buttons and fields, thus they are not available. The runway and the SID or STAR
+are not in this window. Set them from the label or the strip.
 
-Matched against a photo of the real window (`docs/compare.png`: photo above, plugin below). Colours come from
-the vatSys profile's `Colours.xml`, which already carries the real palette; the controls in
-`EurocatControls.cs` apply them the way the real display does rather than the way stock vatSys controls do:
+If the window cannot open (for example, after a vatSys update), the vatSys Flight Plan Window opens.
 
-- Labels and field text are always dark blue.
-- A field you can type in is a sunken box (dark blue top-left, light bottom-right); a display-only field has
-  a thin dark-red outline. The focused field gets a cyan ring.
-- Buttons have a light / dark-blue bevel. Unavailable buttons show pale text instead of a hatch; a selected
-  mode button is sunken with a darker face.
-- The title bar is `MOVE` (drag it) / title / `CLOSE`, with `LOWER` in the footer to send the window back.
+### Use the vatSys Flight Plan Window
 
-Greyed out because vatSys has nothing behind them: NEXT, PREV, CRTE, RPL, HOLD, STE, TMA, CBEP, EXIT, HND/I,
-SUP, TRS, JTRT, AUR, CMC, FMF, PRINT STRIP, PRINT FDR, TPCF, and the LPL, FTYP and second ALTN fields.
-Runway and SID/STAR are not in the Eurocat window; assign them from the label or strip.
+To use the vatSys Flight Plan Window, remove the check mark from **Settings**, **Eurocat Flight Plan Window** in the
+vatSys menu bar. Select the item again to use the window of the plugin. A window that is open does not change. The
+selection applies to the next window that opens.
+
+The plugin keeps the selection in `Documents\vatSys Files\EurocatFlightPlanWindow\Settings.json`, thus vatSys starts
+with the same window the next time. The selection is the same for all profiles.
+
+## Messages
+
+Other plugins can select the window with the toolbox messenger. The mailbox of this plugin is
+`dev.eoinmotherway.flight-plan-window` (see `FlightPlanWindowMessages.cs`).
+
+| Message | Direction | Meaning |
+| --- | --- | --- |
+| `dev.eoinmotherway.flight-plan-window.toggle` | To this plugin | Selects the other Flight Plan Window. |
+| `dev.eoinmotherway.flight-plan-window.enabled` | From this plugin | The window of this plugin is selected. |
+| `dev.eoinmotherway.flight-plan-window.disabled` | From this plugin | The vatSys window is selected. |
+
+The plugin sends the selection to all plugins when it changes. When the plugin starts, it sends the selection to the
+Eurocat Menus plugin (`dev.eoinmotherway.eurocatmenus`).
+
+## How it works
+
+vatSys has no extension point for the Flight Plan Window, thus the plugin patches `MMI.OpenFPWindow` with Harmony
+(`FlightPlanWindowPatches.cs`). A second patch on the `Load` handler of the vatSys window finds a vatSys window that
+the first patch did not stop, and replaces it before it shows.
+
+The plugin gets the vatSys members that are not public by reflection (`FlightPlanInternals.cs`).
+
+## Repository
+
+- `source\FlightPlanWindowPlugin\` - the plugin.
+- `external\vatSysToolbox\` - the toolbox, as a git submodule.
+- `docs\` - screenshots of the first version of the plugin, which was a WinForms window. That version is the first
+  commit of this repository.

@@ -1,0 +1,67 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net472</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <UseWPF>true</UseWPF>
+
+        <Version>0.0.0</Version>
+        <Metadata Condition="'$(BuildMetadata)' != ''">+$(BuildMetadata)</Metadata>
+        <AssemblyVersion>$(Version)</AssemblyVersion>
+        <FileVersion>$(Version)</FileVersion>
+        <InformationalVersion>$(Version)$(Metadata)</InformationalVersion>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <VatSysPath Condition="'$(VatSysPath)' == ''">$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Sawbe\vatSys@Path)</VatSysPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!-- The toolbox is a git submodule. If the directory is empty, run: git submodule update, with the init option. -->
+      <ProjectReference Include="..\..\external\vatSysToolbox\source\vatSysToolbox\vatSysToolbox.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+      <PackageReference Include="ILRepack" Version="2.0.44">
+        <PrivateAssets>all</PrivateAssets>
+      </PackageReference>
+      <PackageReference Include="Lib.Harmony" Version="2.3.6" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
+      <PackageReference Include="Polyfill" Version="11.4.5">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="PresentationCore" />
+        <Reference Include="PresentationFramework" />
+        <Reference Include="System.ComponentModel.Composition" />
+        <Reference Include="System.Drawing" />
+        <Reference Include="vatSys">
+            <HintPath>$(VatSysPath)\bin\vatSys.exe</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System.Windows.Forms" />
+        <Reference Include="WindowsBase" />
+        <Reference Include="WindowsFormsIntegration" />
+    </ItemGroup>
+
+    <!--
+        Merges the dependencies (including the toolbox) into the plugin assembly, so that the plugin is one file.
+        Harmony stays a separate file. vatSys loads only one copy of it, and the plugins that use Harmony share it.
+        Run with -p:Repack=true (build.ps1 does this).
+    -->
+    <Target Name="RepackPlugin" AfterTargets="Build" Condition="'$(Repack)' == 'true'">
+        <ItemGroup>
+            <MergedAssembly Include="$(OutDir)*.dll" Exclude="$(OutDir)$(AssemblyName).dll;$(OutDir)0Harmony.dll" />
+        </ItemGroup>
+        <Exec Command="&quot;$(ILRepack)&quot; /parallel /lib:&quot;$(OutDir.TrimEnd('\'))&quot; /out:&quot;$(OutDir)$(AssemblyName).dll&quot; &quot;$(OutDir)$(AssemblyName).dll&quot; @(MergedAssembly->'&quot;%(FullPath)&quot;', ' ')" />
+        <Delete Files="@(MergedAssembly)" />
+    </Target>
+
+</Project>

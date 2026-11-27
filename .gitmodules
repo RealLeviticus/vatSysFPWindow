@@ -1,0 +1,4 @@
+[submodule "external/vatSysToolbox"]
+	path = external/vatSysToolbox
+	url = https://github.com/RealLeviticus/vatSysToolbox.git
+	branch = flight-plan-window
